@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Penyaring Data SIPP & JMO</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f0f4f8;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #1e3a8a;
+            margin-bottom: 20px;
+        }
+
+        /* Area Upload */
+        .upload-box {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            border: 2px dashed #3b82f6;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-box:hover { background: #eff6ff; border-color: #1d4ed8; }
+        .upload-box input[type="file"] { display: none; }
+        .upload-label { color: #2563eb; font-weight: 600; cursor: pointer; display: block; font-size: 16px; }
+        .upload-box p { font-size: 13px; color: #64748b; margin-top: 8px; line-height: 1.6; }
+        .badge-filter { background-color: #fef08a; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+
+        /* Tombol Hapus Semua */
+        .btn-hapus {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+            transition: background 0.2s;
+            display: none;
+        }
+        .btn-hapus:hover { background-color: #dc2626; }
+
+        /* Area Pencarian NIK */
+        .search-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: none;
+            border-left: 5px solid #10b981;
+        }
+        .search-box label { font-size: 14px; font-weight: 600; color: #1e3a8a; margin-bottom: 8px; display: block; }
+        .search-box input { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 15px; outline: none; }
+        .search-box input:focus { border-color: #3b82f6; }
+        .search-result { font-size: 14px; color: #b45309; margin-top: 10px; font-weight: 700; }
+
+        /* Container Data */
+        #data-container { width: 100%; display: flex; flex-direction: column; gap: 16px; }
+
+        /* Kartu Data */
+        .data-item-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            position: relative;
+        }
+
+        .saldo-header {
+            background-color: #fef3c7;
+            color: #b45309;
+            font-size: 18px;
+            font-weight: 800;
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border: 2px dashed #fbbf24;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .urutan-badge {
+            background: #1e3a8a; color: white; padding: 2px 8px; border-radius: 6px;
+            font-size: 12px; position: absolute; top: -10px; left: -10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .item-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+        
+        .info-field {
+            display: flex; flex-direction: column; background: #f8fafc;
+            padding: 10px 14px; border-radius: 6px; border: 1px solid #e2e8f0;
+        }
+        .info-field.full-width { grid-column: 1 / -1; }
+        
+        .info-label { font-size: 12px; text-transform: uppercase; color: #475569; font-weight: 700; margin-bottom: 4px; }
+        .value-wrapper { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+        .info-value { font-size: 15px; color: #0f172a; font-weight: 600; word-break: break-word; line-height: 1.4; }
+
+        .text-jmo { color: #dc2626; font-weight: 700; }
+        .text-lasik { color: #16a34a; font-weight: 700; font-size: 14px;}
+        .kartu-highlight { color: #1d4ed8; font-weight: 800; font-size: 16px; }
+
+        /* Tombol Salin Kecil */
+        .copy-btn {
+            background: none; border: none; cursor: pointer; color: #64748b; padding: 6px;
+            border-radius: 6px; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; flex-shrink: 0; background-color: #e2e8f0; margin-top: 2px;
+        }
+        .copy-btn:hover { background-color: #cbd5e1; color: #1e3a8a; }
+        .copy-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .copy-btn.copied { color: white; background-color: #10b981; }
+
+        /* Khusus tombol salin Saldo di atas */
+        .copy-saldo-btn { background-color: white; border: 1px solid #fcd34d; padding: 5px; border-radius: 6px; cursor: pointer; color: #b45309; display: flex; align-items: center; justify-content: center; transition: 0.2s;}
+        .copy-saldo-btn:hover { background-color: #fde68a; }
+        .copy-saldo-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .copy-saldo-btn.copied { color: white; background-color: #10b981; border-color: #10b981; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Filter Otomatis SIPP & JMO</h2>
+
+        <div class="upload-box" onclick="document.getElementById('excel-file').click()">
+            <label class="upload-label" id="upload-status">Klik untuk Unggah File Excel (.xlsx)</label>
+            <p>
+                Sistem otomatis menyaring data berdasarkan kriteria:<br>
+                1. Saldo <strong>Minimal Rp 1.000.000</strong><br>
+                2. Detail LASIK mengandung: <span class="badge-filter">Silahkan & JMO</span><br>
+                3. Akun JMO mengandung: <span class="badge-filter">Data Tidak Ditemukan</span>
+            </p>
+            <input type="file" id="excel-file" accept=".xlsx, .xls, .csv">
+        </div>
+
+        <button class="btn-hapus" id="btn-hapus" onclick="hapusSemuaData()">🗑️ Hapus Semua Data Tersimpan</button>
+
+        <div class="search-box" id="search-box">
+            <label>Cari Berdasarkan Awalan NIK:</label>
+            <input type="number" id="input-search-nik" placeholder="Ketik NIK yang dicari..." oninput="filterDataNIK()">
+            <div class="search-result" id="search-result-text">Total Lolos Filter: 0 data</div>
+        </div>
+
+        <div id="data-container"></div>
+    </div>
+
+    <script>
+        let allDataExcel = []; 
+        let filteredData = []; 
+
+        window.onload = function() {
+            const savedData = localStorage.getItem('dataTersaringJMO');
+            if (savedData) {
+                try {
+                    allDataExcel = JSON.parse(savedData);
+                    allDataExcel = hapusDuplikatNIK(allDataExcel);
+                    filteredData = [...allDataExcel];
+                    updateUIPascaLoad();
+                } catch (e) {
+                    console.error("Gagal membaca memori lokal.");
+                }
+            }
+        };
+
+        function simpanKeMemori() {
+            try {
+                localStorage.setItem('dataTersaringJMO', JSON.stringify(allDataExcel));
+            } catch (e) {
+                alert("Penyimpanan memori browser penuh!");
+            }
+        }
+
+        function hapusDuplikatNIK(dataArray) {
+            const seenNik = new Set();
+            const uniqueArray = [];
+            for (const item of dataArray) {
+                const nikValue = getProp(item, ['NIK']);
+                const nikString = String(nikValue).trim();
+                if (nikString !== "" && nikString !== "-" && seenNik.has(nikString)) continue; 
+                if (nikString !== "" && nikString !== "-") seenNik.add(nikString);
+                uniqueArray.push(item);
+            }
+            return uniqueArray;
+        }
+
+        function hapusSemuaData() {
+            if (confirm("YAKIN INGIN MENGHAPUS SEMUA DATA?\nData yang tersimpan di HP akan dibersihkan.")) {
+                allDataExcel = [];
+                filteredData = [];
+                localStorage.removeItem('dataTersaringJMO'); 
+                document.getElementById('search-box').style.display = 'none';
+                document.getElementById('btn-hapus').style.display = 'none';
+                document.getElementById('upload-status').innerText = "Klik untuk Unggah File Excel (.xlsx)";
+                document.getElementById('input-search-nik').value = "";
+                document.getElementById('data-container').innerHTML = "";
+            }
+        }
+
+        function getProp(obj, columnNames) {
+            const keys = Object.keys(obj);
+            for (let name of columnNames) {
+                const target = name.toLowerCase();
+                const foundKey = keys.find(k => k.trim().toLowerCase() === target);
+                if (foundKey && obj[foundKey] !== undefined && obj[foundKey] !== "") return obj[foundKey];
+            }
+            for (let name of columnNames) {
+                const target = name.toLowerCase();
+                const foundKey = keys.find(k => k.toLowerCase().includes(target));
+                if (foundKey && obj[foundKey] !== undefined && obj[foundKey] !== "") return obj[foundKey];
+            }
+            return "-";
+        }
+
+        function formatExcelDate(value) {
+            if (value === undefined || value === null || value === "-") return "-";
+            if (typeof value === 'number') {
+                const date = new Date(Math.round((value - 25569) * 86400 * 1000));
+                const d = String(date.getDate()).padStart(2, '0');
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const y = date.getFullYear();
+                return `${d}-${m}-${y}`;
+            }
+            return String(value); 
+        }
+
+        function getPropDate(obj, columnNames) {
+            const keys = Object.keys(obj);
+            const isValidDate = (val) => {
+                if (!val || val === "-") return false;
+                if (typeof val === 'number' || /\d/.test(String(val))) return true;
+                return false;
+            };
+            for (let name of columnNames) {
+                const target = name.toLowerCase();
+                const foundKey = keys.find(k => k.trim().toLowerCase() === target);
+                if (foundKey && isValidDate(obj[foundKey])) return formatExcelDate(obj[foundKey]);
+            }
+            return formatExcelDate(getProp(obj, columnNames));
+        }
+
+        // FUNGSI MEMBERSIHKAN ANGKA SALDO
+        function extractAngka(val) {
+            if (typeof val === 'number') return val;
+            if (typeof val === 'string') {
+                const clean = val.replace(/[^0-9]/g, '');
+                return clean !== '' ? parseInt(clean, 10) : 0;
+            }
+            return 0;
+        }
+
+        document.getElementById('excel-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('upload-status').innerText = "Sedang menganalisa dan menyaring data...";
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', raw: true });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rawJson = XLSX.utils.sheet_to_json(worksheet);
+
+                    const newData = rawJson.filter(item => {
+                        const cekNik = String(getProp(item, ['NIK'])).trim();
+                        
+                        // SYARAT 1: LASIK ("Silahkan" dan "JMO")
+                        const detailLasikText = String(getProp(item, ['Detail LASIK', 'detail_lasik'])).toLowerCase();
+                        const lolosLasik = detailLasikText.includes("silahkan") && detailLasikText.includes("jmo");
+
+                        // SYARAT 2: JMO ("Data Tidak Ditemukan")
+                        const akunJmoText = String(getProp(item, ['Akun JMO', 'akun_jmo'])).toLowerCase();
+                        const lolosJmo = akunJmoText.includes("data tidak ditemukan");
+
+                        // SYARAT 3: SALDO >= 1.000.000
+                        const saldoMentah = getProp(item, ['Saldo LASIK', 'Saldo', 'Total Saldo']);
+                        const saldoAngka = extractAngka(saldoMentah);
+                        const lolosSaldo = saldoAngka >= 1000000;
+
+                        return cekNik !== "-" && lolosLasik && lolosJmo && lolosSaldo;
+                    });
+
+                    if (newData.length === 0) {
+                        alert("Tidak ada data yang memenuhi KETIGA syarat:\n1. Saldo >= Rp 1 Juta\n2. LASIK = 'Silahkan JMO'\n3. Akun JMO = 'Data Tidak Ditemukan'.");
+                        document.getElementById('upload-status').innerText = "Klik untuk Unggah File Excel (.xlsx)";
+                        return;
+                    }
+
+                    allDataExcel = allDataExcel.concat(newData);
+                    const jumlahSebelum = allDataExcel.length;
+                    allDataExcel = hapusDuplikatNIK(allDataExcel);
+                    
+                    document.getElementById('input-search-nik').value = "";
+                    filteredData = [...allDataExcel];
+
+                    simpanKeMemori(); 
+                    updateUIPascaLoad();
+                    
+                    alert(`Tersaring Sukses! Ditemukan ${newData.length} data prioritas (Saldo >= 1 Jt) dan otomatis ditambahkan ke layar.`);
+
+                } catch (error) {
+                    console.error(error);
+                    alert("Gagal membaca file Excel.");
+                }
+                document.getElementById('excel-file').value = ""; 
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function updateUIPascaLoad() {
+            if (allDataExcel.length > 0) {
+                document.getElementById('search-box').style.display = 'block';
+                document.getElementById('btn-hapus').style.display = 'block';
+                document.getElementById('upload-status').innerText = `Data Tersimpan: ${allDataExcel.length} Peserta (Saldo > 1 Juta)`;
+                document.getElementById('search-result-text').innerText = "Total Keseluruhan: " + allDataExcel.length + " data";
+                renderAllCards();
+            }
+        }
+
+        function filterDataNIK() {
+            const keyword = document.getElementById('input-search-nik').value.trim();
+            if (keyword === "") {
+                filteredData = [...allDataExcel];
+                document.getElementById('search-result-text').innerText = "Total Keseluruhan: " + allDataExcel.length + " data";
+            } else {
+                filteredData = allDataExcel.filter(item => {
+                    let nikString = String(getProp(item, ['NIK'])).trim(); 
+                    return nikString !== "-" && nikString.startsWith(keyword);
+                });
+                document.getElementById('search-result-text').innerText = `Ditemukan: ${filteredData.length} data (Awalan NIK '${keyword}')`;
+            }
+            renderAllCards();
+        }
+
+        function formatRupiah(angka) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka);
+        }
+
+        function renderAllCards() {
+            const container = document.getElementById('data-container');
+            container.innerHTML = ""; 
+
+            if (filteredData.length === 0) {
+                container.innerHTML = "<p style='text-align:center; color:#64748b; margin-top:20px; font-weight:600;'>Data tidak ditemukan.</p>";
+                return;
+            }
+
+            let htmlContent = "";
+            filteredData.forEach((item, index) => {
+                const nik = getProp(item, ['NIK']);
+                const kpj = getProp(item, ['KPJ']);
+                const nama = getProp(item, ['Nama']);
+                const tglLahir = getPropDate(item, ['Tgl Lahir']);
+                const jmlKartu = getProp(item, ['Jumlah Kartu', 'Jml Kartu']);
+                
+                // MENGHITUNG SALDO
+                const saldoMentah = getProp(item, ['Saldo LASIK', 'Saldo', 'Total Saldo']);
+                const saldoAngka = extractAngka(saldoMentah);
+                const saldoFormatted = formatRupiah(saldoAngka);
+                
+                // ALAMAT
+                const kota = getProp(item, ['Kota', 'Kabupaten']);
+                const kec = getProp(item, ['Kecamatan']);
+                const kel = getProp(item, ['Kelurahan', 'Desa']);
+                let arrAlamat = [kota, kec, kel].filter(val => val !== "-" && val.trim() !== "");
+                let alamatGabung = arrAlamat.length > 0 ? arrAlamat.join(", ") : "-";
+
+                // LAINNYA
+                const detailLasik = getProp(item, ['Detail LASIK']);
+                const akunJmo = getProp(item, ['Akun JMO']);
+
+                // ENCODING UNTUK COPY BUTTON
+                const safeNik = encodeURIComponent(nik);
+                const safeKpj = encodeURIComponent(kpj);
+                const safeNama = encodeURIComponent(nama);
+                const safeTglLahir = encodeURIComponent(tglLahir);
+                const safeAlamat = encodeURIComponent(alamatGabung);
+                const safeSaldoAngka = encodeURIComponent(saldoAngka); // Menyimpan angka aslinya (misal 1500000)
+
+                htmlContent += `
+                    <div class="data-item-card">
+                        <div class="urutan-badge">#${index + 1}</div>
+                        
+                        <div class="saldo-header">
+                            <span style="display: flex; align-items: center; gap: 8px;">
+                                TOTAL SALDO: ${saldoFormatted}
+                                <button class="copy-saldo-btn" onclick="copyDirect(decodeURIComponent('${safeSaldoAngka}'), this)" title="Salin Angka Saldo">
+                                    <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                </button>
+                            </span>
+                        </div>
+                        
+                        <div class="item-grid">
+                            <div class="info-field">
+                                <span class="info-label">1. NIK</span>
+                                <div class="value-wrapper">
+                                    <span class="info-value">${nik}</span>
+                                    <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeNik}'), this)" title="Salin NIK"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                                </div>
+                            </div>
+                            
+                            <div class="info-field">
+                                <span class="info-label">2. KPJ</span>
+                                <div class="value-wrapper">
+                                    <span class="info-value">${kpj}</span>
+                                    <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeKpj}'), this)" title="Salin KPJ"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                                </div>
+                            </div>
+                            
+                            <div class="info-field full-width">
+                                <span class="info-label">3. Nama Peserta</span>
+                                <div class="value-wrapper">
+                                    <span class="info-value">${nama}</span>
+                                    <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeNama}'), this)" title="Salin Nama"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                                </div>
+                            </div>
+
+                            <div class="info-field">
+                                <span class="info-label">4. Tanggal Lahir</span>
+                                <div class="value-wrapper">
+                                    <span class="info-value">${tglLahir}</span>
+                                    <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeTglLahir}'), this)" title="Salin Tanggal Lahir"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                                </div>
+                            </div>
+                            
+                            <div class="info-field">
+                                <span class="info-label">5. Jumlah Kartu</span>
+                                <div class="value-wrapper">
+                                    <span class="info-value kartu-highlight">${jmlKartu}</span>
+                                </div>
+                            </div>
+
+                            <div class="info-field full-width">
+                                <span class="info-label">6. Wilayah (Kota, Kecamatan, Kelurahan)</span>
+                                <div class="value-wrapper">
+                                    <span class="info-value">${alamatGabung}</span>
+                                    <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeAlamat}'), this)" title="Salin Alamat"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                                </div>
+                            </div>
+                            
+                            <div class="info-field full-width">
+                                <span class="info-label">7. Detail LASIK</span>
+                                <span class="info-value text-lasik">${detailLasik}</span>
+                            </div>
+
+                            <div class="info-field full-width">
+                                <span class="info-label">8. Akun JMO</span>
+                                <span class="info-value text-jmo">${akunJmo}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = htmlContent;
+        }
+
+        function copyDirect(textToCopy, btnElement) {
+            if (!textToCopy || textToCopy === "-") return;
+            const textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+            textArea.style.top = "0"; textArea.style.left = "0";
+            textArea.style.position = "fixed"; textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus(); textArea.select();
+            try {
+                if (document.execCommand('copy')) {
+                    const originalIcon = btnElement.innerHTML;
+                    btnElement.innerHTML = `<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>`;
+                    btnElement.classList.add('copied');
+                    setTimeout(() => { btnElement.innerHTML = originalIcon; btnElement.classList.remove('copied'); }, 1500);
+                }
+            } catch (err) { console.error("Gagal menyalin: ", err); }
+            document.body.removeChild(textArea);
+        }
+    </script>
+</body>
+</html>
