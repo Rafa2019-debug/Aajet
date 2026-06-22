@@ -160,14 +160,14 @@
         <h2>Filter Otomatis SIPP & JMO</h2>
 
         <div class="upload-box" onclick="document.getElementById('excel-file').click()">
-            <label class="upload-label" id="upload-status">Klik untuk Unggah File Excel (.xlsx)</label>
+            <label class="upload-label" id="upload-status">Klik untuk Unggah Beberapa File Sekaligus (.xlsx)</label>
             <p>
                 Sistem otomatis menyaring data berdasarkan kriteria:<br>
                 1. Saldo <strong>Rp 1.000.000 s/d Rp 14.999.000</strong><br>
                 2. Detail LASIK mengandung: <span class="badge-filter">Silahkan & JMO</span><br>
                 3. Akun JMO mengandung: <span class="badge-filter">Data Tidak Ditemukan</span>
             </p>
-            <input type="file" id="excel-file" accept=".xlsx, .xls, .csv">
+            <input type="file" id="excel-file" accept=".xlsx, .xls, .csv" multiple>
         </div>
 
         <button class="btn-hapus" id="btn-hapus" onclick="hapusSemuaData()">🗑️ Hapus Semua Data Tersimpan</button>
@@ -221,7 +221,7 @@
                 allDataExcel = []; filteredData = []; localStorage.removeItem('dataTersaringJMO'); 
                 document.getElementById('search-box').style.display = 'none';
                 document.getElementById('btn-hapus').style.display = 'none';
-                document.getElementById('upload-status').innerText = "Klik untuk Unggah File Excel (.xlsx)";
+                document.getElementById('upload-status').innerText = "Klik untuk Unggah Beberapa File Sekaligus (.xlsx)";
                 document.getElementById('input-search-nik').value = "";
                 document.getElementById('data-container').innerHTML = "";
             }
@@ -278,16 +278,31 @@
             return 0;
         }
 
-        document.getElementById('excel-file').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        // Fungsi bantuan untuk membaca file secara Async
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(new Uint8Array(e.target.result));
+                reader.onerror = e => reject(e);
+                reader.readAsArrayBuffer(file);
+            });
+        }
 
-            document.getElementById('upload-status').innerText = "Sedang menganalisa dan menyaring data...";
+        // Sistem proses file yang telah diupgrade untuk banyak file (Multiple Upload)
+        document.getElementById('excel-file').addEventListener('change', async function(e) {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
+            document.getElementById('upload-status').innerText = `Sedang memproses ${files.length} file sekaligus...`;
+            
+            let totalBaruDitemukan = 0;
+            let adaFileValid = false;
+
+            // Loop melalui setiap file yang dipilih
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
                 try {
-                    const data = new Uint8Array(e.target.result);
+                    const data = await readFileAsArrayBuffer(file);
                     const workbook = XLSX.read(data, { type: 'array', raw: true });
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
@@ -302,7 +317,6 @@
                         const akunJmoText = String(getProp(item, ['Akun JMO', 'akun_jmo'])).toLowerCase();
                         const lolosJmo = akunJmoText.includes("data tidak ditemukan");
 
-                        // LOGIKA SALDO BARU: DIANTARA 1.000.000 DAN 14.999.000
                         const saldoMentah = getProp(item, ['Saldo LASIK', 'Saldo', 'Total Saldo']);
                         const saldoAngka = extractAngka(saldoMentah);
                         const lolosSaldo = saldoAngka >= 1000000 && saldoAngka <= 14999000;
@@ -310,27 +324,36 @@
                         return cekNik !== "-" && lolosLasik && lolosJmo && lolosSaldo;
                     });
 
-                    if (newData.length === 0) {
-                        alert("Tidak ada data yang memenuhi KETIGA syarat filter otomatis (Saldo 1 Jt - 14.9 Jt, Silahkan JMO, Tidak Ditemukan).");
-                        document.getElementById('upload-status').innerText = "Klik untuk Unggah File Excel (.xlsx)";
-                        return;
+                    if (newData.length > 0) {
+                        allDataExcel = allDataExcel.concat(newData);
+                        totalBaruDitemukan += newData.length;
+                        adaFileValid = true;
                     }
 
-                    allDataExcel = allDataExcel.concat(newData);
-                    allDataExcel = hapusDuplikatNIK(allDataExcel);
-                    
-                    document.getElementById('input-search-nik').value = "";
-                    filteredData = [...allDataExcel];
+                } catch (error) { 
+                    console.error("Gagal membaca file:", file.name, error); 
+                }
+            }
 
-                    simpanKeMemori(); 
-                    updateUIPascaLoad();
-                    
-                    alert(`Tersaring Sukses! Ditemukan ${newData.length} data yang sesuai (Saldo 1 Jt - 14.9 Jt) dan otomatis ditambahkan ke layar.`);
-
-                } catch (error) { console.error(error); alert("Gagal membaca file Excel."); }
+            if (!adaFileValid) {
+                alert("Dari semua file yang diunggah, tidak ada satupun data yang memenuhi KETIGA syarat filter otomatis.");
+                document.getElementById('upload-status').innerText = "Klik untuk Unggah Beberapa File Sekaligus (.xlsx)";
                 document.getElementById('excel-file').value = ""; 
-            };
-            reader.readAsArrayBuffer(file);
+                return;
+            }
+
+            // Bersihkan NIK duplikat setelah semua file tergabung
+            allDataExcel = hapusDuplikatNIK(allDataExcel);
+            
+            document.getElementById('input-search-nik').value = "";
+            filteredData = [...allDataExcel];
+
+            simpanKeMemori(); 
+            updateUIPascaLoad();
+            
+            alert(`Tersaring Sukses! Ditemukan ${totalBaruDitemukan} data prioritas dari ${files.length} file yang diunggah dan otomatis ditambahkan ke layar (Sistem telah membuang NIK Ganda).`);
+            
+            document.getElementById('excel-file').value = ""; 
         });
 
         function updateUIPascaLoad() {
@@ -418,11 +441,7 @@
 
                 // TEKS COPY UNTUK MASING-MASING FITUR
                 const textGabunganCopy = (jenisKelamin !== "-" ? jenisKelamin + "\n" : "") + tglLahir;
-                
-                // Format Salin Wilayah Diapit Bintang
                 const textWilayahCopy = alamatGabung !== "-" ? `*${alamatGabung}*` : "-"; 
-                
-                // Format Salin Saldo Pakai Titik
                 const textSaldoCopy = saldoAngka > 0 ? new Intl.NumberFormat('id-ID').format(saldoAngka) : "0"; 
 
                 const safeNik = encodeURIComponent(nik);
