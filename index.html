@@ -138,7 +138,6 @@
         .kartu-highlight { color: #1d4ed8; font-weight: 800; font-size: 16px; }
         .saldo-highlight { color: #b45309; font-weight: 800; font-size: 16px; background: #fef3c7; padding: 2px 6px; border-radius: 4px; }
         
-        /* Desain Kombinasi Gender & Tgl Lahir */
         .gender-badge { color: #0369a1; font-size: 12px; font-weight: 800; margin-bottom: 2px; display: block; letter-spacing: 0.5px;}
 
         /* Tombol Salin Kecil */
@@ -164,7 +163,7 @@
             <label class="upload-label" id="upload-status">Klik untuk Unggah File Excel (.xlsx)</label>
             <p>
                 Sistem otomatis menyaring data berdasarkan kriteria:<br>
-                1. Saldo <strong>Minimal Rp 1.000.000</strong><br>
+                1. Saldo <strong>Rp 1.000.000 s/d Rp 14.999.000</strong><br>
                 2. Detail LASIK mengandung: <span class="badge-filter">Silahkan & JMO</span><br>
                 3. Akun JMO mengandung: <span class="badge-filter">Data Tidak Ditemukan</span>
             </p>
@@ -303,15 +302,16 @@
                         const akunJmoText = String(getProp(item, ['Akun JMO', 'akun_jmo'])).toLowerCase();
                         const lolosJmo = akunJmoText.includes("data tidak ditemukan");
 
+                        // LOGIKA SALDO BARU: DIANTARA 1.000.000 DAN 14.999.000
                         const saldoMentah = getProp(item, ['Saldo LASIK', 'Saldo', 'Total Saldo']);
                         const saldoAngka = extractAngka(saldoMentah);
-                        const lolosSaldo = saldoAngka >= 1000000;
+                        const lolosSaldo = saldoAngka >= 1000000 && saldoAngka <= 14999000;
 
                         return cekNik !== "-" && lolosLasik && lolosJmo && lolosSaldo;
                     });
 
                     if (newData.length === 0) {
-                        alert("Tidak ada data yang memenuhi KETIGA syarat filter otomatis.");
+                        alert("Tidak ada data yang memenuhi KETIGA syarat filter otomatis (Saldo 1 Jt - 14.9 Jt, Silahkan JMO, Tidak Ditemukan).");
                         document.getElementById('upload-status').innerText = "Klik untuk Unggah File Excel (.xlsx)";
                         return;
                     }
@@ -325,7 +325,7 @@
                     simpanKeMemori(); 
                     updateUIPascaLoad();
                     
-                    alert(`Tersaring Sukses! Ditemukan ${newData.length} data prioritas (Saldo >= 1 Jt) dan otomatis ditambahkan ke layar.`);
+                    alert(`Tersaring Sukses! Ditemukan ${newData.length} data yang sesuai (Saldo 1 Jt - 14.9 Jt) dan otomatis ditambahkan ke layar.`);
 
                 } catch (error) { console.error(error); alert("Gagal membaca file Excel."); }
                 document.getElementById('excel-file').value = ""; 
@@ -337,7 +337,7 @@
             if (allDataExcel.length > 0) {
                 document.getElementById('search-box').style.display = 'block';
                 document.getElementById('btn-hapus').style.display = 'block';
-                document.getElementById('upload-status').innerText = `Data Tersimpan: ${allDataExcel.length} Peserta (Saldo > 1 Juta)`;
+                document.getElementById('upload-status').innerText = `Data Tersimpan: ${allDataExcel.length} Peserta (Saldo 1 Jt - 14.9 Jt)`;
                 document.getElementById('search-result-text').innerText = "Total Keseluruhan: " + allDataExcel.length + " data";
                 renderAllCards();
             }
@@ -395,7 +395,7 @@
                 const detailLasik = getProp(item, ['Detail LASIK']);
                 const akunJmo = getProp(item, ['Akun JMO']);
 
-                // PENDETEKSI JENIS KELAMIN PINTAR DARI NIK ATAU KOLOM
+                // PENDETEKSI JENIS KELAMIN
                 let jkRaw = String(getProp(item, ['Jenis Kelamin', 'JK', 'Gender'])).toUpperCase();
                 let jenisKelamin = "";
                 
@@ -404,7 +404,6 @@
                 } else if (jkRaw === "P" || jkRaw.includes("PEREMPUAN") || jkRaw.includes("WANITA")) {
                     jenisKelamin = "WANITA";
                 } else {
-                    // Jika kolom kosong, ekstrak gender secara cerdas dari angka ke-7 & 8 NIK
                     if (nik !== "-" && String(nik).length >= 16) {
                         let tglNik = parseInt(String(nik).substring(6, 8), 10);
                         if (!isNaN(tglNik)) {
@@ -417,15 +416,21 @@
                     }
                 }
 
-                // Teks yang akan tercopy saat tombol ditekan (Gabungan)
+                // TEKS COPY UNTUK MASING-MASING FITUR
                 const textGabunganCopy = (jenisKelamin !== "-" ? jenisKelamin + "\n" : "") + tglLahir;
+                
+                // Format Salin Wilayah Diapit Bintang
+                const textWilayahCopy = alamatGabung !== "-" ? `*${alamatGabung}*` : "-"; 
+                
+                // Format Salin Saldo Pakai Titik
+                const textSaldoCopy = saldoAngka > 0 ? new Intl.NumberFormat('id-ID').format(saldoAngka) : "0"; 
 
                 const safeNik = encodeURIComponent(nik);
                 const safeKpj = encodeURIComponent(kpj);
                 const safeNama = encodeURIComponent(nama);
                 const safeGabunganKelaminTanggal = encodeURIComponent(textGabunganCopy);
-                const safeAlamat = encodeURIComponent(alamatGabung);
-                const safeSaldoAngka = encodeURIComponent(saldoAngka);
+                const safeAlamatCopy = encodeURIComponent(textWilayahCopy);
+                const safeSaldoCopyFinal = encodeURIComponent(textSaldoCopy);
 
                 htmlContent += `
                     <div class="data-item-card">
@@ -433,7 +438,7 @@
                         
                         <div class="wilayah-header">
                             <span>📍 ${alamatGabung}</span>
-                            <button class="copy-btn copy-wilayah-btn" onclick="copyDirect(decodeURIComponent('${safeAlamat}'), this)" title="Salin Wilayah">
+                            <button class="copy-btn copy-wilayah-btn" onclick="copyDirect(decodeURIComponent('${safeAlamatCopy}'), this)" title="Salin Wilayah (Pakai Bintang)">
                                 <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             </button>
                         </div>
@@ -443,7 +448,7 @@
                                 <span class="info-label">1. Total Saldo</span>
                                 <div class="value-wrapper" style="align-items: center;">
                                     <span class="info-value saldo-highlight">${saldoFormatted}</span>
-                                    <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeSaldoAngka}'), this)" title="Salin Angka Saldo">
+                                    <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeSaldoCopyFinal}'), this)" title="Salin Nominal Titik">
                                         <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                     </button>
                                 </div>
