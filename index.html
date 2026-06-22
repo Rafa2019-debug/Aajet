@@ -140,7 +140,7 @@
         
         .gender-badge { color: #0369a1; font-size: 12px; font-weight: 800; margin-bottom: 2px; display: block; letter-spacing: 0.5px;}
 
-        /* Tombol Salin Kecil */
+        /* Tombol Salin Kecil (Ori) */
         .copy-btn {
             background: white; border: 1px solid #cbd5e1; cursor: pointer; color: #64748b; padding: 6px;
             border-radius: 6px; display: flex; align-items: center; justify-content: center;
@@ -152,6 +152,28 @@
 
         .copy-wilayah-btn { border-color: #7dd3fc; color: #0369a1; }
         .copy-wilayah-btn:hover { background-color: #bae6fd; }
+
+        /* Tombol Salin Format Khusus */
+        .btn-format-khusus {
+            width: 100%;
+            background-color: #10b981;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+        }
+        .btn-format-khusus:hover { background-color: #059669; }
+        .btn-format-khusus.copied { background-color: #1e3a8a; }
     </style>
 </head>
 <body>
@@ -278,7 +300,6 @@
             return 0;
         }
 
-        // Fungsi bantuan untuk membaca file secara Async
         function readFileAsArrayBuffer(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -288,7 +309,6 @@
             });
         }
 
-        // Sistem proses file yang telah diupgrade untuk banyak file (Multiple Upload)
         document.getElementById('excel-file').addEventListener('change', async function(e) {
             const files = e.target.files;
             if (!files || files.length === 0) return;
@@ -298,7 +318,6 @@
             let totalBaruDitemukan = 0;
             let adaFileValid = false;
 
-            // Loop melalui setiap file yang dipilih
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 try {
@@ -336,13 +355,12 @@
             }
 
             if (!adaFileValid) {
-                alert("Dari semua file yang diunggah, tidak ada satupun data yang memenuhi KETIGA syarat filter otomatis.");
+                alert("Dari semua file yang diunggah, tidak ada satupun data yang memenuhi KETIGA syarat filter otomatis (Saldo 1 Jt - 14.9 Jt, Silahkan JMO, Tidak Ditemukan).");
                 document.getElementById('upload-status').innerText = "Klik untuk Unggah Beberapa File Sekaligus (.xlsx)";
                 document.getElementById('excel-file').value = ""; 
                 return;
             }
 
-            // Bersihkan NIK duplikat setelah semua file tergabung
             allDataExcel = hapusDuplikatNIK(allDataExcel);
             
             document.getElementById('input-search-nik').value = "";
@@ -351,7 +369,7 @@
             simpanKeMemori(); 
             updateUIPascaLoad();
             
-            alert(`Tersaring Sukses! Ditemukan ${totalBaruDitemukan} data prioritas dari ${files.length} file yang diunggah dan otomatis ditambahkan ke layar (Sistem telah membuang NIK Ganda).`);
+            alert(`Tersaring Sukses! Ditemukan ${totalBaruDitemukan} data prioritas dari ${files.length} file yang diunggah.`);
             
             document.getElementById('excel-file').value = ""; 
         });
@@ -400,7 +418,7 @@
                 const kpj = getProp(item, ['KPJ']);
                 const nama = getProp(item, ['Nama']);
                 const tglLahir = getPropDate(item, ['Tgl Lahir']);
-                const jmlKartu = getProp(item, ['Jumlah Kartu', 'Jml Kartu']);
+                const jmlKartuStr = getProp(item, ['Jumlah Kartu', 'Jml Kartu']);
                 
                 // MENGHITUNG SALDO
                 const saldoMentah = getProp(item, ['Saldo LASIK', 'Saldo', 'Total Saldo']);
@@ -414,7 +432,6 @@
                 let arrAlamat = [kota, kec, kel].filter(val => val !== "-" && val.trim() !== "");
                 let alamatGabung = arrAlamat.length > 0 ? arrAlamat.join(", ") : "-";
 
-                // LAINNYA
                 const detailLasik = getProp(item, ['Detail LASIK']);
                 const akunJmo = getProp(item, ['Akun JMO']);
 
@@ -439,10 +456,26 @@
                     }
                 }
 
-                // TEKS COPY UNTUK MASING-MASING FITUR
                 const textGabunganCopy = (jenisKelamin !== "-" ? jenisKelamin + "\n" : "") + tglLahir;
                 const textWilayahCopy = alamatGabung !== "-" ? `*${alamatGabung}*` : "-"; 
                 const textSaldoCopy = saldoAngka > 0 ? new Intl.NumberFormat('id-ID').format(saldoAngka) : "0"; 
+
+                // LOGIKA FORMAT KHUSUS
+                let jmlAngka = parseInt(jmlKartuStr);
+                if (isNaN(jmlAngka)) jmlAngka = 0;
+                
+                let kartuLabel = "";
+                let saldoLabel = textSaldoCopy;
+
+                if (jmlAngka <= 1) {
+                    kartuLabel = "TUNGGAL";
+                } else {
+                    kartuLabel = `SENSOR ${jmlAngka} JMO OK`;
+                    saldoLabel = `GLOBAL ${textSaldoCopy}`; // Tambahan tulisan GLOBAL untuk lebih dari 1 kartu
+                }
+
+                // Template teks untuk format khusus dengan spasi yang dirapatkan dan ditambah N/A 01-
+                let formatKhususText = `${textWilayahCopy}\n\n${nik}\n${jenisKelamin}\n${tglLahir}\n\n${kartuLabel}\n${saldoLabel}\n-\nN/A 01-\n\nQwer123@\n${kpj}\n${nama}`;
 
                 const safeNik = encodeURIComponent(nik);
                 const safeKpj = encodeURIComponent(kpj);
@@ -450,6 +483,7 @@
                 const safeGabunganKelaminTanggal = encodeURIComponent(textGabunganCopy);
                 const safeAlamatCopy = encodeURIComponent(textWilayahCopy);
                 const safeSaldoCopyFinal = encodeURIComponent(textSaldoCopy);
+                const safeFormatKhusus = encodeURIComponent(formatKhususText);
 
                 htmlContent += `
                     <div class="data-item-card">
@@ -511,7 +545,7 @@
                             <div class="info-field">
                                 <span class="info-label">6. Jumlah Kartu</span>
                                 <div class="value-wrapper" style="align-items: center;">
-                                    <span class="info-value kartu-highlight">${jmlKartu}</span>
+                                    <span class="info-value kartu-highlight">${jmlKartuStr}</span>
                                 </div>
                             </div>
 
@@ -525,6 +559,10 @@
                                 <span class="info-value text-jmo">${akunJmo}</span>
                             </div>
                         </div>
+
+                        <button class="btn-format-khusus" onclick="copyDirect(decodeURIComponent('${safeFormatKhusus}'), this)">
+                            📋 Salin Format Khusus
+                        </button>
                     </div>
                 `;
             });
@@ -542,10 +580,20 @@
             textArea.focus(); textArea.select();
             try {
                 if (document.execCommand('copy')) {
-                    const originalIcon = btnElement.innerHTML;
-                    btnElement.innerHTML = `<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>`;
+                    const originalText = btnElement.innerHTML;
+                    
+                    if (btnElement.classList.contains('btn-format-khusus')) {
+                        btnElement.innerHTML = `✔️ Berhasil Disalin!`;
+                    } else {
+                        btnElement.innerHTML = `<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>`;
+                    }
+                    
                     btnElement.classList.add('copied');
-                    setTimeout(() => { btnElement.innerHTML = originalIcon; btnElement.classList.remove('copied'); }, 1500);
+                    
+                    setTimeout(() => { 
+                        btnElement.innerHTML = originalText; 
+                        btnElement.classList.remove('copied'); 
+                    }, 1500);
                 }
             } catch (err) { console.error("Gagal menyalin: ", err); }
             document.body.removeChild(textArea);
