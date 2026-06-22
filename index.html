@@ -97,27 +97,27 @@
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
             padding: 20px;
             position: relative;
-        }
-
-        .saldo-header {
-            background-color: #fef3c7;
-            color: #b45309;
-            font-size: 18px;
-            font-weight: 800;
-            text-align: center;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            border: 2px dashed #fbbf24;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
+            border-top: 4px solid #1e3a8a;
         }
 
         .urutan-badge {
             background: #1e3a8a; color: white; padding: 2px 8px; border-radius: 6px;
             font-size: 12px; position: absolute; top: -10px; left: -10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* KHUSUS WILAYAH DI PALING ATAS */
+        .wilayah-header {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            font-size: 16px;
+            font-weight: 800;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border: 2px dashed #7dd3fc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .item-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
@@ -129,29 +129,30 @@
         .info-field.full-width { grid-column: 1 / -1; }
         
         .info-label { font-size: 12px; text-transform: uppercase; color: #475569; font-weight: 700; margin-bottom: 4px; }
-        .value-wrapper { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+        .value-wrapper { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .info-value { font-size: 15px; color: #0f172a; font-weight: 600; word-break: break-word; line-height: 1.4; }
 
         .text-jmo { color: #dc2626; font-weight: 700; }
         .text-lasik { color: #16a34a; font-weight: 700; font-size: 14px;}
+        
         .kartu-highlight { color: #1d4ed8; font-weight: 800; font-size: 16px; }
+        .saldo-highlight { color: #b45309; font-weight: 800; font-size: 16px; background: #fef3c7; padding: 2px 6px; border-radius: 4px; }
+        
+        /* Desain Kombinasi Gender & Tgl Lahir */
+        .gender-badge { color: #0369a1; font-size: 12px; font-weight: 800; margin-bottom: 2px; display: block; letter-spacing: 0.5px;}
 
         /* Tombol Salin Kecil */
         .copy-btn {
-            background: none; border: none; cursor: pointer; color: #64748b; padding: 6px;
+            background: white; border: 1px solid #cbd5e1; cursor: pointer; color: #64748b; padding: 6px;
             border-radius: 6px; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s; flex-shrink: 0; background-color: #e2e8f0; margin-top: 2px;
+            transition: all 0.2s; flex-shrink: 0; margin-top: 2px;
         }
-        .copy-btn:hover { background-color: #cbd5e1; color: #1e3a8a; }
+        .copy-btn:hover { background-color: #f1f5f9; color: #1e3a8a; border-color: #94a3b8; }
         .copy-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-        .copy-btn.copied { color: white; background-color: #10b981; }
+        .copy-btn.copied { color: white; background-color: #10b981; border-color: #10b981; }
 
-        /* Khusus tombol salin Saldo di atas */
-        .copy-saldo-btn { background-color: white; border: 1px solid #fcd34d; padding: 5px; border-radius: 6px; cursor: pointer; color: #b45309; display: flex; align-items: center; justify-content: center; transition: 0.2s;}
-        .copy-saldo-btn:hover { background-color: #fde68a; }
-        .copy-saldo-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-        .copy-saldo-btn.copied { color: white; background-color: #10b981; border-color: #10b981; }
-
+        .copy-wilayah-btn { border-color: #7dd3fc; color: #0369a1; }
+        .copy-wilayah-btn:hover { background-color: #bae6fd; }
     </style>
 </head>
 <body>
@@ -200,11 +201,7 @@
         };
 
         function simpanKeMemori() {
-            try {
-                localStorage.setItem('dataTersaringJMO', JSON.stringify(allDataExcel));
-            } catch (e) {
-                alert("Penyimpanan memori browser penuh!");
-            }
+            try { localStorage.setItem('dataTersaringJMO', JSON.stringify(allDataExcel)); } catch (e) { alert("Penyimpanan memori penuh!"); }
         }
 
         function hapusDuplikatNIK(dataArray) {
@@ -221,10 +218,8 @@
         }
 
         function hapusSemuaData() {
-            if (confirm("YAKIN INGIN MENGHAPUS SEMUA DATA?\nData yang tersimpan di HP akan dibersihkan.")) {
-                allDataExcel = [];
-                filteredData = [];
-                localStorage.removeItem('dataTersaringJMO'); 
+            if (confirm("YAKIN INGIN MENGHAPUS SEMUA DATA?")) {
+                allDataExcel = []; filteredData = []; localStorage.removeItem('dataTersaringJMO'); 
                 document.getElementById('search-box').style.display = 'none';
                 document.getElementById('btn-hapus').style.display = 'none';
                 document.getElementById('upload-status').innerText = "Klik untuk Unggah File Excel (.xlsx)";
@@ -275,7 +270,6 @@
             return formatExcelDate(getProp(obj, columnNames));
         }
 
-        // FUNGSI MEMBERSIHKAN ANGKA SALDO
         function extractAngka(val) {
             if (typeof val === 'number') return val;
             if (typeof val === 'string') {
@@ -303,15 +297,12 @@
                     const newData = rawJson.filter(item => {
                         const cekNik = String(getProp(item, ['NIK'])).trim();
                         
-                        // SYARAT 1: LASIK ("Silahkan" dan "JMO")
                         const detailLasikText = String(getProp(item, ['Detail LASIK', 'detail_lasik'])).toLowerCase();
                         const lolosLasik = detailLasikText.includes("silahkan") && detailLasikText.includes("jmo");
 
-                        // SYARAT 2: JMO ("Data Tidak Ditemukan")
                         const akunJmoText = String(getProp(item, ['Akun JMO', 'akun_jmo'])).toLowerCase();
                         const lolosJmo = akunJmoText.includes("data tidak ditemukan");
 
-                        // SYARAT 3: SALDO >= 1.000.000
                         const saldoMentah = getProp(item, ['Saldo LASIK', 'Saldo', 'Total Saldo']);
                         const saldoAngka = extractAngka(saldoMentah);
                         const lolosSaldo = saldoAngka >= 1000000;
@@ -320,13 +311,12 @@
                     });
 
                     if (newData.length === 0) {
-                        alert("Tidak ada data yang memenuhi KETIGA syarat:\n1. Saldo >= Rp 1 Juta\n2. LASIK = 'Silahkan JMO'\n3. Akun JMO = 'Data Tidak Ditemukan'.");
+                        alert("Tidak ada data yang memenuhi KETIGA syarat filter otomatis.");
                         document.getElementById('upload-status').innerText = "Klik untuk Unggah File Excel (.xlsx)";
                         return;
                     }
 
                     allDataExcel = allDataExcel.concat(newData);
-                    const jumlahSebelum = allDataExcel.length;
                     allDataExcel = hapusDuplikatNIK(allDataExcel);
                     
                     document.getElementById('input-search-nik').value = "";
@@ -337,10 +327,7 @@
                     
                     alert(`Tersaring Sukses! Ditemukan ${newData.length} data prioritas (Saldo >= 1 Jt) dan otomatis ditambahkan ke layar.`);
 
-                } catch (error) {
-                    console.error(error);
-                    alert("Gagal membaca file Excel.");
-                }
+                } catch (error) { console.error(error); alert("Gagal membaca file Excel."); }
                 document.getElementById('excel-file').value = ""; 
             };
             reader.readAsArrayBuffer(file);
@@ -408,75 +395,102 @@
                 const detailLasik = getProp(item, ['Detail LASIK']);
                 const akunJmo = getProp(item, ['Akun JMO']);
 
-                // ENCODING UNTUK COPY BUTTON
+                // PENDETEKSI JENIS KELAMIN PINTAR DARI NIK ATAU KOLOM
+                let jkRaw = String(getProp(item, ['Jenis Kelamin', 'JK', 'Gender'])).toUpperCase();
+                let jenisKelamin = "";
+                
+                if (jkRaw === "L" || jkRaw.includes("LAKI") || jkRaw.includes("PRIA")) {
+                    jenisKelamin = "PRIA";
+                } else if (jkRaw === "P" || jkRaw.includes("PEREMPUAN") || jkRaw.includes("WANITA")) {
+                    jenisKelamin = "WANITA";
+                } else {
+                    // Jika kolom kosong, ekstrak gender secara cerdas dari angka ke-7 & 8 NIK
+                    if (nik !== "-" && String(nik).length >= 16) {
+                        let tglNik = parseInt(String(nik).substring(6, 8), 10);
+                        if (!isNaN(tglNik)) {
+                            jenisKelamin = tglNik > 40 ? "WANITA" : "PRIA";
+                        } else {
+                            jenisKelamin = "-";
+                        }
+                    } else {
+                        jenisKelamin = "-";
+                    }
+                }
+
+                // Teks yang akan tercopy saat tombol ditekan (Gabungan)
+                const textGabunganCopy = (jenisKelamin !== "-" ? jenisKelamin + "\n" : "") + tglLahir;
+
                 const safeNik = encodeURIComponent(nik);
                 const safeKpj = encodeURIComponent(kpj);
                 const safeNama = encodeURIComponent(nama);
-                const safeTglLahir = encodeURIComponent(tglLahir);
+                const safeGabunganKelaminTanggal = encodeURIComponent(textGabunganCopy);
                 const safeAlamat = encodeURIComponent(alamatGabung);
-                const safeSaldoAngka = encodeURIComponent(saldoAngka); // Menyimpan angka aslinya (misal 1500000)
+                const safeSaldoAngka = encodeURIComponent(saldoAngka);
 
                 htmlContent += `
                     <div class="data-item-card">
                         <div class="urutan-badge">#${index + 1}</div>
                         
-                        <div class="saldo-header">
-                            <span style="display: flex; align-items: center; gap: 8px;">
-                                TOTAL SALDO: ${saldoFormatted}
-                                <button class="copy-saldo-btn" onclick="copyDirect(decodeURIComponent('${safeSaldoAngka}'), this)" title="Salin Angka Saldo">
-                                    <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                                </button>
-                            </span>
+                        <div class="wilayah-header">
+                            <span>📍 ${alamatGabung}</span>
+                            <button class="copy-btn copy-wilayah-btn" onclick="copyDirect(decodeURIComponent('${safeAlamat}'), this)" title="Salin Wilayah">
+                                <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
                         </div>
                         
                         <div class="item-grid">
                             <div class="info-field">
-                                <span class="info-label">1. NIK</span>
-                                <div class="value-wrapper">
+                                <span class="info-label">1. Total Saldo</span>
+                                <div class="value-wrapper" style="align-items: center;">
+                                    <span class="info-value saldo-highlight">${saldoFormatted}</span>
+                                    <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeSaldoAngka}'), this)" title="Salin Angka Saldo">
+                                        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="info-field">
+                                <span class="info-label">2. NIK</span>
+                                <div class="value-wrapper" style="align-items: center;">
                                     <span class="info-value">${nik}</span>
                                     <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeNik}'), this)" title="Salin NIK"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
                                 </div>
                             </div>
                             
                             <div class="info-field">
-                                <span class="info-label">2. KPJ</span>
-                                <div class="value-wrapper">
+                                <span class="info-label">3. KPJ</span>
+                                <div class="value-wrapper" style="align-items: center;">
                                     <span class="info-value">${kpj}</span>
                                     <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeKpj}'), this)" title="Salin KPJ"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
                                 </div>
                             </div>
                             
                             <div class="info-field full-width">
-                                <span class="info-label">3. Nama Peserta</span>
-                                <div class="value-wrapper">
+                                <span class="info-label">4. Nama Peserta</span>
+                                <div class="value-wrapper" style="align-items: center;">
                                     <span class="info-value">${nama}</span>
                                     <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeNama}'), this)" title="Salin Nama"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
                                 </div>
                             </div>
 
                             <div class="info-field">
-                                <span class="info-label">4. Tanggal Lahir</span>
-                                <div class="value-wrapper">
-                                    <span class="info-value">${tglLahir}</span>
-                                    <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeTglLahir}'), this)" title="Salin Tanggal Lahir"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                                <span class="info-label">5. Kelamin & Tgl Lahir</span>
+                                <div class="value-wrapper" style="align-items: center;">
+                                    <span class="info-value">
+                                        <span class="gender-badge">${jenisKelamin}</span>
+                                        ${tglLahir}
+                                    </span>
+                                    <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeGabunganKelaminTanggal}'), this)" title="Salin Data"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
                                 </div>
                             </div>
                             
                             <div class="info-field">
-                                <span class="info-label">5. Jumlah Kartu</span>
-                                <div class="value-wrapper">
+                                <span class="info-label">6. Jumlah Kartu</span>
+                                <div class="value-wrapper" style="align-items: center;">
                                     <span class="info-value kartu-highlight">${jmlKartu}</span>
                                 </div>
                             </div>
 
-                            <div class="info-field full-width">
-                                <span class="info-label">6. Wilayah (Kota, Kecamatan, Kelurahan)</span>
-                                <div class="value-wrapper">
-                                    <span class="info-value">${alamatGabung}</span>
-                                    <button class="copy-btn" onclick="copyDirect(decodeURIComponent('${safeAlamat}'), this)" title="Salin Alamat"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
-                                </div>
-                            </div>
-                            
                             <div class="info-field full-width">
                                 <span class="info-label">7. Detail LASIK</span>
                                 <span class="info-value text-lasik">${detailLasik}</span>
